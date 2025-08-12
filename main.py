@@ -18,6 +18,12 @@ def fetch_user(username: str) -> Dict[str, Any]:
     if r.status_code != 200:
         raise RuntimeError(f"Failed to fetch user {username}: {r.status_code} {r.text}")
     return r.json()
+
+def fetch_repos(username: str) -> List[Dict[str, Any]]:
+    r = gh_get(f'users/{username}/repos', params={'per_page': 100, 'sort': 'updated'})
+    if r.status_code != 200:
+        raise RuntimeError(f"Failed to fetch repos for {username}: {r.status_code} {r.text}")
+    return r.json()
     
 
 def main():
@@ -32,6 +38,13 @@ def main():
         print("Followers:", user.get("followers"), " • Following:", user.get("following"))
         print("Public Repos:", user.get("public_repos"))
         print("Profile URL:", user.get("html_url"))
+
+         # Test repos
+        repos = fetch_repos(username)
+        print(f"\n=== Repos (showing up to 5 of {len(repos)}) ===")
+        for r in repos[:5]:
+            print(f"- {r.get('name')}  | ★ {r.get('stargazers_count', 0)}  | Forks {r.get('forks_count', 0)}  | Lang: {r.get('language') or '—'}")
+
     except Exception as e:
         print("Error:", e)
 
