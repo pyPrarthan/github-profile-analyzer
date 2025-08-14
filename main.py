@@ -2,6 +2,11 @@ import os
 from typing import List, Dict, Any
 import requests
 
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich import box 
+
 # ---------------- API Helpers ----------------
 GITHUB_API = "https://api.github.com"
 
@@ -59,6 +64,56 @@ def fetch_language_bytes(repos: List[Dict[str, Any]], verbose: bool = False) -> 
         totals["Other"] = len(repos)  # fallback
     return totals
 
+
+def show_dashboard(user: Dict[str, Any], repos: List[Dict[str, Any]], lang_bytes: Dict[str, int]) -> None:
+    console = Console()
+
+    #Header panel
+    header = f"[bold bright_cyan]{user.get('name') or user['login']}[/] (@{user['login']})"
+    sub = f"Followers: {user['followers']} • Following: {user['following']} • Public Repos: {user['public_repos']}"
+    bio = user.get("bio") or "—"
+    console.print(Panel.fit(f"{header}\n[dim]{sub}[/]\n\n{bio}", border_style="bright_cyan"))
+
+    # Recent repos (up to 10)
+    table = Table(title="Repository Highlights", box=box.MINIMAL_DOUBLE_HEAD)
+    table.add_column("Name", style="bold")
+    table.add_column("★ Stars", justify="right")
+    table.add_column("Forks", justify="right")
+    table.add_column("Language", style="dim")
+    for r in repos[:10]:
+        table.add_row(
+            r.get("name", "—"),
+            str(r.get("stargazers_count", 0)),
+            str(r.get("forks_count", 0)),
+            str(r.get("language") or "—"),
+        )
+    console.print(table)
+
+    # Quick stats
+    stars_total = sum(r.get("stargazers_count", 0) for r in repos)
+    forks_total = sum(r.get("forks_count", 0) for r in repos)
+    top_repo = max(repos, key=lambda rr: rr.get("stargazers_count", 0), default=None)
+
+    stats = Table(box=box.SIMPLE_HEAVY)
+    stats.add_column("Metric")
+    stats.add_column("Value", justify="right")
+    stats.add_row("Total Stars", str(stars_total))
+    stats.add_row("Total Forks", str(forks_total))
+    stats.add_row("Top Repo", top_repo["name"] if top_repo else "—")
+    stats.add_row("Top Repo ★", str(top_repo["stargazers_count"]) if top_repo else "—")
+    console.print(stats)
+
+    # Language breakdown (percent of total bytes)
+    total_bytes = sum(lang_bytes.values()) or 1
+    langs_sorted = sorted(lang_bytes.items(), key=lambda x: x[1], reverse=True)[:10]
+    langs = Table(title="Languages (by code size)", box=box.SIMPLE)
+    langs.add_column("Language")
+    langs.add_column("%", justify="right")
+    for lang, size in langs_sorted:
+        langs.add_row(lang, f"{(size/total_bytes)*100:.1f}")
+    console.print(langs)
+
+
 # ---------------- Main / Quick Tests ----------------
 def main():
     try:
@@ -66,37 +121,22 @@ def main():
         if not username:
             raise ValueError("Username cannot be empty.")
 
-        # Profile summary
+        # Fetch profile and repos
         user = fetch_user(username)
-        print("\n=== Profile ===")
-        print("Login:", user.get("login"))
-        print("Name :", user.get("name"))
-        print("Bio  :", user.get("bio"))
-        print("Followers:", user.get("followers"), " • Following:", user.get("following"))
-        print("Public Repos:", user.get("public_repos"))
-        print("Profile URL:", user.get("html_url"))
-
-        # Repos preview
         repos = fetch_repos(username)
-        print(f"\n=== Repos (showing up to 5 of {len(repos)}) ===")
-        for r in repos[:5]:
-            print(f"- {r.get('name')}  | ★ {r.get('stargazers_count', 0)}  | Forks {r.get('forks_count', 0)}  | Lang: {r.get('language') or '—'}")
 
-        # Language bytes (ACCURATE aggregation across repos)
+        # Calculate language usage
         verbose = os.getenv("VERBOSE_LANG", "0") == "1"
         lang_bytes = fetch_language_bytes(repos, verbose=verbose)
 
-        print("\n=== Languages (by code size — LIVE) ===")
-        total_bytes = sum(lang_bytes.values()) or 1
-        top_langs = sorted(lang_bytes.items(), key=lambda x: x[1], reverse=True)[:10]
-        for lang, size in top_langs:
-            pct = (size / total_bytes) * 100
-            print(f"- {lang:<15} {size:>12} bytes  ({pct:5.1f}%)")
+        # Show rich dashboard
+        show_dashboard(user, repos, lang_bytes)
 
         print("\nDone ✅")
 
     except Exception as e:
         print("Error:", e)
+
 
 if __name__ == "__main__":
     main()
