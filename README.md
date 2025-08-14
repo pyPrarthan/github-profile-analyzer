@@ -45,7 +45,6 @@ JavaScript          9.8
 ...
 ```
 
-*(Optional) Add a screenshot later: `docs/demo.png`)*
 
 ---
 
