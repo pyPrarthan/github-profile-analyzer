@@ -53,7 +53,7 @@ JavaScript          9.8
 
 ### 1) Clone & install
 ```bash
-git clone https://github.com/<your-username>/github-profile-analyzer.git
+git clone https://github.com/pyPrarthan/github-profile-analyzer.git
 cd github-profile-analyzer
 pip install -r requirements.txt
 ```
@@ -113,26 +113,7 @@ VERBOSE_LANG=1 python main.py
 ├─ main.py                # CLI entrypoint
 ├─ requirements.txt       # (optional) requests, rich
 ├─ README.md
-└─ report.md              # placeholder for future reports
 ```
-
----
-
-## 🧪 Example Requirements
-
-```
-requests
-rich
-```
-
----
-
-## 🧩 Roadmap / Nice-to-haves
-
-- [ ] Save a **Matplotlib** bar chart `languages.png`
-- [ ] Auto-generate `report.md` with links + chart
-- [ ] Add CLI flags (`--username`, `--no-accurate`, `--limit 10`)
-- [ ] Cache `languages_url` responses to reduce API calls
 
 ---
 
